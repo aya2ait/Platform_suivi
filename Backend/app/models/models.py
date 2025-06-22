@@ -104,6 +104,7 @@ class Mission(Base):
     dateDebut = Column(DateTime, nullable=False)
     dateFin = Column(DateTime, nullable=False)
     moyenTransport = Column(String(50))
+    trajet_predefini = Column(Text, nullable=True)
     statut = Column(String(50), default="CREEE")
     vehicule_id = Column(Integer, ForeignKey("Vehicule.id"), nullable=True)
     directeur_id = Column(Integer, ForeignKey("Directeur.id"), nullable=False)
@@ -112,15 +113,25 @@ class Mission(Base):
 
     vehicule_rel = relationship("Vehicule", back_populates="missions")
     directeur_rel = relationship("Directeur", back_populates="missions")
-    affectations = relationship("Affectation", back_populates="mission_rel")
+    # --- MODIFICATION START ---
+    affectations = relationship(
+        "Affectation",
+        back_populates="mission_rel",
+        cascade="all, delete-orphan" # This tells SQLAlchemy to delete child Affectation records
+    )
+    # --- MODIFICATION END ---
     trajets = relationship("Trajet", back_populates="mission_rel")
     anomalies = relationship("Anomalie", back_populates="mission_rel")
 
 class Affectation(Base):
     __tablename__ = "Affectation"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    mission_id = Column(Integer, ForeignKey("Mission.id"), nullable=False)
-    collaborateur_id = Column(Integer, ForeignKey("Collaborateur.id"), nullable=False)
+    # --- MODIFICATION START ---
+    # Ensure ondelete="CASCADE" is present on the ForeignKey for database schema
+    mission_id = Column(Integer, ForeignKey("Mission.id", ondelete="CASCADE"), nullable=False)
+    # Adding cascade for collaborateur_id relationship just in case, though not directly related to your current error
+    collaborateur_id = Column(Integer, ForeignKey("Collaborateur.id", ondelete="CASCADE"), nullable=False)
+    # --- MODIFICATION END ---
     dejeuner = Column(Integer, default=0)
     dinner = Column(Integer, default=0)
     accouchement = Column(Integer, default=0) # Assuming accommodation or related, adjust if needed
@@ -135,7 +146,10 @@ class Affectation(Base):
 class Trajet(Base):
     __tablename__ = "Trajet"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    mission_id = Column(Integer, ForeignKey("Mission.id"), nullable=False)
+    # --- MODIFICATION START ---
+    # It's good practice to add cascade for relationships where deleting the parent should delete children
+    mission_id = Column(Integer, ForeignKey("Mission.id", ondelete="CASCADE"), nullable=False)
+    # --- MODIFICATION END ---
     timestamp = Column(DateTime, default=func.now())
     latitude = Column(Numeric(10, 8), nullable=False)
     longitude = Column(Numeric(11, 8), nullable=False)
@@ -147,7 +161,10 @@ class Trajet(Base):
 class Anomalie(Base):
     __tablename__ = "Anomalie"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    mission_id = Column(Integer, ForeignKey("Mission.id"), nullable=False)
+    # --- MODIFICATION START ---
+    # It's good practice to add cascade for relationships where deleting the parent should delete children
+    mission_id = Column(Integer, ForeignKey("Mission.id", ondelete="CASCADE"), nullable=False)
+    # --- MODIFICATION END ---
     type = Column(String(100), nullable=False)
     description = Column(Text)
     dateDetection = Column(DateTime, default=func.now(), nullable=False)
@@ -158,7 +175,10 @@ class Anomalie(Base):
 class Remboursement(Base):
     __tablename__ = "Remboursement"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    affectation_id = Column(Integer, ForeignKey("Affectation.id"), nullable=False)
+    # --- MODIFICATION START ---
+    # It's good practice to add cascade for relationships where deleting the parent should delete children
+    affectation_id = Column(Integer, ForeignKey("Affectation.id", ondelete="CASCADE"), nullable=False)
+    # --- MODIFICATION END ---
     matriculeMission = Column(String(100)) # Renamed from MatriculeMission to match python naming conventions
     nom = Column(String(100), nullable=False)
     mois = Column(String(10), nullable=False)

@@ -1,9 +1,6 @@
 from fastapi import FastAPI
-from app.api.endpoints import missions # Import the missions router
-
-# ====================================================================
-# FastAPI Application
-# ====================================================================
+from fastapi.middleware.cors import CORSMiddleware
+from app.api.endpoints import missions
 
 app = FastAPI(
     title="ONEE Suivi Deplacements API",
@@ -11,14 +8,18 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Include the missions router
+# ✅ Ajoute ce bloc IMPORTANT :
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # ton frontend React (vite.js)
+    allow_credentials=True,
+    allow_methods=["*"],  # autorise toutes les méthodes: GET, POST, etc.
+    allow_headers=["*"],  # autorise tous les headers comme Content-Type, Authorization
+)
+
+# Ensuite tu peux inclure ton routeur :
 app.include_router(missions.router)
 
-# You can add other routers here as your application grows, e.g.:
-# from app.api.endpoints import users
-# app.include_router(users.router)
-
-# You can also add root endpoints or general application logic here
 @app.get("/")
 async def root():
     return {"message": "Welcome to ONEE Suivi Deplacements API!"}

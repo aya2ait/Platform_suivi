@@ -1,0 +1,19 @@
+/* src/index.css */
+/* In your src/index.css or a custom.css file */
+.hover-shadow-lg:hover {
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important; /* Example for a larger shadow on hover */
+}
+
+.transition-shadow {
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+.icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem !important; /* Adjust padding as needed */
+}
+.icon-button .lucide { /* Target Lucide icons if needed */
+    display: block;
+}
