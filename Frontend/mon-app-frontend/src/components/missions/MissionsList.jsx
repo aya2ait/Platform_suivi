@@ -5,7 +5,8 @@ import ApiService from '../../api/apiService';
 import MissionCard from './MissionCard';
 import MissionForm from './MissionForm';
 import MissionDetails from './MissionDetails';
-import MissionCollaboratorAssignment from './MissionCollaboratorAssignment'; // Import the new component
+import MissionCollaboratorAssignment from './MissionCollaboratorAssignment'; // Cet import reste tel quel
+import CollaboratorManagement from './CollaboratorManagement'; // NOUVEL IMPORT DE VOTRE COMPOSANT
 import { MissionStatus } from '../../constants';
 
 const MissionsList = () => {
@@ -13,17 +14,21 @@ const MissionsList = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // State for MissionForm (create/edit mission details)
+    // États pour MissionForm (création/édition de mission)
     const [showMissionForm, setShowMissionForm] = useState(false);
-    const [editingMission, setEditingMission] = useState(null); // The mission object being edited
+    const [editingMission, setEditingMission] = useState(null); // L'objet mission en cours d'édition
 
-    // State for MissionDetails modal
-    const [selectedMission, setSelectedMission] = useState(null); // The mission object for details view
+    // États pour MissionDetails (affichage des détails de mission)
+    const [selectedMission, setSelectedMission] = useState(null); // L'objet mission pour la vue détaillée
 
-    // State for MissionCollaboratorAssignment modal
+    // États pour MissionCollaboratorAssignment (assignation initiale de collaborateurs, si c'est une modale différente)
     const [showAssignmentForm, setShowAssignmentForm] = useState(false);
-    const [missionIdToAssign, setMissionIdToAssign] = useState(null); // ID of the mission to assign collaborators to
-    const [collaboratorsForAssignment, setCollaboratorsForAssignment] = useState([]); // Current collaborators for that mission
+    const [missionIdToAssign, setMissionIdToAssign] = useState(null); // ID de la mission pour l'assignation initiale
+    const [collaboratorsForAssignment, setCollaboratorsForAssignment] = useState([]); // Collaborateurs pour l'assignation initiale
+
+    // NOUVEAUX ÉTATS POUR CollaboratorManagement
+    const [showCollaboratorManagementModal, setShowCollaboratorManagementModal] = useState(false);
+    const [missionIdForManagement, setMissionIdForManagement] = useState(null); // L'ID de la mission dont on gère les collaborateurs
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
@@ -56,32 +61,29 @@ const MissionsList = () => {
         };
     }, [statusFilter, searchTerm]);
 
-    // Handles submission from MissionForm when creating a NEW mission
-    // Dans MissionsList.jsx
+    // Gère la soumission du MissionForm lors de la création d'une NOUVELLE mission
     const handleCreateMission = async (responseData) => {
-     try {
-        // ✅ responseData est déjà la mission créée par MissionForm
-        setShowMissionForm(false);
-        
-        // Utiliser directement responseData (qui contient déjà l'ID)
-        setMissionIdToAssign(responseData.id);
-        setCollaboratorsForAssignment([]);
-        setShowAssignmentForm(true);
-        
-        fetchMissions(); // Refresh la liste
-     } catch (err) {
-        console.error('Erreur:', err);
-        alert(`Erreur: ${err.message}`);
-    }
-};
+        try {
+            setShowMissionForm(false);
+            
+            // Si vous voulez ouvrir CollaboratorManagement après la création, décommentez ceci:
+            // setMissionIdForManagement(responseData.id);
+            // setShowCollaboratorManagementModal(true);
+            
+            fetchMissions(); // Rafraîchit la liste
+        } catch (err) {
+            console.error('Erreur:', err);
+            alert(`Erreur: ${err.message}`);
+        }
+    };
 
-    // Handles submission from MissionForm when updating an EXISTING mission
+    // Gère la soumission du MissionForm lors de la mise à jour d'une mission EXISTANTE
     const handleUpdateMission = async (missionData) => {
         try {
             await ApiService.updateMission(editingMission.id, missionData);
             setEditingMission(null);
             setShowMissionForm(false);
-            fetchMissions(); // Refresh the list after update
+            fetchMissions(); // Rafraîchit la liste après la mise à jour
         } catch (err) {
             console.error('Erreur lors de la modification:', err);
             alert(`Erreur lors de la modification de la mission: ${err.message || 'Veuillez vérifier les données.'}`);
@@ -100,15 +102,14 @@ const MissionsList = () => {
         }
     };
 
-    // New handler for clicking "Assign Collaborators" button on a MissionCard
+    // Handler existant pour l'assignation initiale (si MissionCollaboratorAssignment est toujours utilisé)
     const handleAssignCollaboratorsClick = (mission) => {
         setMissionIdToAssign(mission.id);
-        // Ensure mission.affectations exists and is an array before mapping
         if (mission.affectations && Array.isArray(mission.affectations)) {
             setCollaboratorsForAssignment(
                 mission.affectations.map(aff => ({
                     matricule: aff.collaborateur.matricule,
-                    nom: aff.collaborateur.nom || '' // Use a default empty string if name is not present
+                    nom: aff.collaborateur.nom || ''
                 }))
             );
         } else {
@@ -117,14 +118,26 @@ const MissionsList = () => {
         setShowAssignmentForm(true);
     };
 
-    // Callback when collaborators are saved in MissionCollaboratorAssignment
+    // Callback lorsque les collaborateurs sont enregistrés dans MissionCollaboratorAssignment
     const handleCollaboratorAssignmentSaved = () => {
-        setShowAssignmentForm(false); // Close the assignment modal
-        setMissionIdToAssign(null); // Clear the selected mission ID
-        setCollaboratorsForAssignment([]); // Clear the collaborators state
-        fetchMissions(); // Refresh the main mission list to show updated assignments
+        setShowAssignmentForm(false);
+        setMissionIdToAssign(null);
+        setCollaboratorsForAssignment([]);
+        fetchMissions(); // Rafraîchit la liste principale des missions
     };
 
+    // NOUVEAU HANDLER POUR OUVRIR CollaboratorManagement
+    const openCollaboratorManagement = (missionId) => {
+        setMissionIdForManagement(missionId);
+        setShowCollaboratorManagementModal(true);
+    };
+
+    // NOUVEAU HANDLER POUR FERMER CollaboratorManagement
+    const closeCollaboratorManagement = () => {
+        setShowCollaboratorManagementModal(false);
+        setMissionIdForManagement(null); // Réinitialise l'ID de la mission
+        fetchMissions(); // Rafraîchit la liste des missions après une modification
+    };
 
     if (loading) {
         return (
@@ -207,6 +220,8 @@ const MissionsList = () => {
                                 onDelete={handleDeleteMission}
                                 onViewDetails={setSelectedMission}
                                 onAssignCollaborators={handleAssignCollaboratorsClick} 
+                                // NOUVELLE PROP POUR GÉRER LES COLLABORATEURS AVEC VOTRE NOUVEAU COMPOSANT
+                                onManageCollaborators={() => openCollaboratorManagement(mission.id)} 
                             />
                         </Col>
                     ))
@@ -217,7 +232,7 @@ const MissionsList = () => {
                 )}
             </Row>
 
-            {/* Modals */}
+            {/* Modals existantes */}
             {showMissionForm && (
                 <MissionForm
                     mission={editingMission}
@@ -236,7 +251,7 @@ const MissionsList = () => {
                 />
             )}
 
-            {/* NEW: Mission Collaborator Assignment Modal */}
+            {/* Votre modale MissionCollaboratorAssignment existante */}
             {showAssignmentForm && missionIdToAssign && (
                 <MissionCollaboratorAssignment
                     missionId={missionIdToAssign}
@@ -247,6 +262,16 @@ const MissionsList = () => {
                         setMissionIdToAssign(null);
                         setCollaboratorsForAssignment([]);
                     }}
+                />
+            )}
+
+            {/* VOTRE NOUVELLE MODALE CollaboratorManagement EST ICI */}
+            {showCollaboratorManagementModal && missionIdForManagement && (
+                <CollaboratorManagement
+                    missionId={missionIdForManagement}
+                    show={showCollaboratorManagementModal}
+                    onHide={closeCollaboratorManagement} // Appelle notre handler pour fermer et rafraîchir
+                    onUpdate={fetchMissions} // Le composant interne rafraîchit déjà sa liste, mais on peut aussi rafraîchir la liste parente
                 />
             )}
         </Container>

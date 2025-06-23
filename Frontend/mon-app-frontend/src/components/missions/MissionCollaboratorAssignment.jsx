@@ -29,7 +29,7 @@ const MissionCollaboratorAssignment = ({ missionId, currentCollaborators = [], o
 
         setLoadingCollaborateur(true);
         try {
-            // In a real scenario, you'd make an API call to validate the matricule and fetch collaborator details
+            // Dans un cas réel, vous feriez une requête API pour valider le matricule
             // For now, we simulate success
             const nouveauCollaborateur = {
                 matricule: matricule,
@@ -65,7 +65,7 @@ const MissionCollaboratorAssignment = ({ missionId, currentCollaborators = [], o
             console.log("Affectation des collaborateurs à la mission:", missionId, assignmentData);
 
             const response = await fetch(`${API_BASE_URL}/missions/${missionId}/assign_collaborators/`, {
-                method: 'POST', // or PUT if your backend handles upsert via PUT
+                method: 'POST', // ou PUT si votre backend gère l'upsert via PUT
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(assignmentData),
             });
@@ -78,7 +78,7 @@ const MissionCollaboratorAssignment = ({ missionId, currentCollaborators = [], o
 
             const affectationResult = await response.json();
             console.log("Collaborateurs affectés avec succès:", affectationResult);
-            onSave(affectationResult); // Pass the result to the parent component
+            onSave(affectationResult); // Passer le résultat au composant parent
         } catch (error) {
             console.error("Erreur lors de l'affectation des collaborateurs:", error);
             alert(`Erreur lors de l'affectation des collaborateurs: ${error.message || "Échec de l'affectation."}`);

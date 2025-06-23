@@ -35,7 +35,11 @@ class ApiService {
             console.error("Error reading error response text:", textError);
           }
         }
-        throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+        // FastAPI 422 errors usually have 'detail' key with a list of errors
+        const errorMessage = errorData.detail 
+                               ? errorData.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join(', ')
+                               : errorData.message;
+        throw new Error(errorMessage || `HTTP error! Status: ${response.status}`);
       }
 
       // If the response status is 204 (No Content), there will be no body to parse.
@@ -57,17 +61,14 @@ class ApiService {
   // Missions Endpoints
   static async getMissions(params = {}) {
     const queryString = new URLSearchParams(params).toString();
-    // Assuming backend endpoint for listing missions is '/missions/' or '/missions'
     return this.request(`/missions/${queryString ? `?${queryString}` : ''}`);
   }
 
   static async getMission(id) {
-    // Assuming backend endpoint for single mission is '/missions/{id}/'
     return this.request(`/missions/${id}/`);
   }
 
   static async createMission(data) {
-    // Assuming backend endpoint for creating mission is '/missions/'
     return this.request('/missions/', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -75,7 +76,6 @@ class ApiService {
   }
 
   static async updateMission(id, data) {
-    // Assuming backend endpoint for updating mission is '/missions/{id}/'
     return this.request(`/missions/${id}/`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -83,14 +83,24 @@ class ApiService {
   }
 
   static async deleteMission(id) {
-    // Assuming backend endpoint for deleting mission is '/missions/{id}/'
     return this.request(`/missions/${id}/`, {
       method: 'DELETE',
     });
   }
 
+  // --- New method for Collaborator Management ---
+  static async manageMissionCollaborators(missionId, collaboratorsData) {
+    // This endpoint should correspond to your backend's PATCH route
+    // It expects a body like: { "collaborateurs": [{ matricule: "...", action: "...", ... }] }
+    return this.request(`/missions/${missionId}/manage-collaborators`, {
+      method: 'PATCH', // Use PATCH as indicated by your backend logs
+      body: JSON.stringify(collaboratorsData), // collaboratorsData should already be in the correct { collaborateurs: [...] } format
+    });
+  }
+  // ---------------------------------------------
+
   static async assignCollaborators(missionId, collaborators) {
-    // Check your backend route for this action
+    // This method might become redundant if `manageMissionCollaborators` handles all assignment/management
     return this.request(`/missions/${missionId}/assign_collaborators/`, {
       method: 'POST',
       body: JSON.stringify({ collaborateurs: collaborators }),
@@ -98,11 +108,15 @@ class ApiService {
   }
 
   static async getMissionCollaborators(missionId) {
-    // Check your backend route for this action
+    // This is useful for fetching the current list of collaborators for a mission
     return this.request(`/missions/${missionId}/collaborators/`);
   }
 
   // You would add more static methods here for other resources (collaborateurs, vehicules, etc.)
+  static async getAllCollaborators() {
+    // Assuming you have an endpoint to get all possible collaborators for selection
+    return this.request('/collaborateurs/'); 
+  }
 }
 
 export default ApiService;

@@ -7,7 +7,38 @@ import json
 # ====================================================================
 # Pydantic Schemas
 # ====================================================================
+# Ajoutez ces schémas à votre fichier schemas.py existant
 
+# Nouveau schéma pour la modification des collaborateurs avec des détails optionnels
+class CollaborateurUpdate(BaseModel):
+    matricule: str = Field(..., description="Matricule du collaborateur")
+    dejeuner: Optional[int] = Field(default=0, description="Nombre de repas de déjeuner")
+    dinner: Optional[int] = Field(default=0, description="Nombre de repas de dîner")
+    accouchement: Optional[int] = Field(default=0, description="Nombre d'hébergements")
+
+class UpdateCollaboratorsRequest(BaseModel):
+    collaborateurs: List[CollaborateurUpdate] = Field(
+        ...,
+        min_length=1,
+        description="Liste des collaborateurs avec leurs détails d'affectation"
+    )
+
+# Optionnel: Schéma pour une réponse détaillée incluant les infos du collaborateur
+class DetailedAffectationResponse(BaseModel):
+    id: int
+    mission_id: int
+    collaborateur_id: int
+    collaborateur_matricule: str
+    collaborateur_nom: str
+    dejeuner: int
+    dinner: int
+    accouchement: int
+    montantCalcule: float
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
 class GeoPoint(BaseModel):
     latitude: float
     longitude: float
@@ -221,6 +252,43 @@ class AffectationResponse(BaseModel):
     id: int
     mission_id: int
     collaborateur_id: int
+    dejeuner: int
+    dinner: int
+    accouchement: int
+    montantCalcule: float
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class CollaborateurAction(BaseModel):
+    matricule: str = Field(..., description="Matricule du collaborateur")
+    action: str = Field(..., description="Action à effectuer: 'add', 'update', ou 'remove'")
+    dejeuner: Optional[int] = Field(default=0, description="Nombre de repas de déjeuner (pour add/update)")
+    dinner: Optional[int] = Field(default=0, description="Nombre de repas de dîner (pour add/update)")
+    accouchement: Optional[int] = Field(default=0, description="Nombre d'hébergements (pour add/update)")
+
+    @field_validator('action')
+    def validate_action(cls, v):
+        allowed_actions = ['add', 'update', 'remove']
+        if v not in allowed_actions:
+            raise ValueError(f'Action must be one of: {allowed_actions}')
+        return v
+
+class ManageCollaboratorsRequest(BaseModel):
+    collaborateurs: List[CollaborateurAction] = Field(
+        ...,
+        min_length=1,
+        description="Liste des actions à effectuer sur les collaborateurs"
+    )
+
+class DetailedAffectationResponse(BaseModel):
+    id: int
+    mission_id: int
+    collaborateur_id: int
+    collaborateur_matricule: str
+    collaborateur_nom: str
     dejeuner: int
     dinner: int
     accouchement: int
