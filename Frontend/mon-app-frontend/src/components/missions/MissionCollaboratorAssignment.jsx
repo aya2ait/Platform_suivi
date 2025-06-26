@@ -29,8 +29,8 @@ const MissionCollaboratorAssignment = ({ missionId, currentCollaborators = [], o
 
         setLoadingCollaborateur(true);
         try {
-            // Dans un cas réel, vous feriez une requête API pour valider le matricule
-            // For now, we simulate success
+            //Dans un cas réel, vous feriez une requête API pour valider le matricule
+            // For now, we simulate success 
             const nouveauCollaborateur = {
                 matricule: matricule,
                 nom: `Collaborateur ${matricule}`, // Placeholder name

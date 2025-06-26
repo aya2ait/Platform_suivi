@@ -1,18 +1,22 @@
 import os
+import urllib.parse
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
-from sqlalchemy.sql import func # For default timestamps
+from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.sql import func  # For default timestamps
 
 # ====================================================================
-# Database Configuration
+# Database Configuration - Azure SQL
 # ====================================================================
 
-# Replace these values with your MySQL database information
-DATABASE_URL = "mysql+mysqlconnector://root:@localhost:3306/ONEE_SuiviDeplacements"
-# Example: "mysql+mysqlconnector://user:password@host:port/ONEE_SuiviDeplacements"
+# Encodage du mot de passe
+encoded_password = urllib.parse.quote_plus("OneeSQL2025!")
 
-# If using Docker Compose or environment variables, you can define them here
-# DATABASE_URL = os.getenv("DATABASE_URL", "mysql+mysqlconnector://user:password@host:port/ONEE_SuiviDeplacements")
+# Connexion à Azure SQL
+DATABASE_URL = (
+    f"mssql+pyodbc://onesql_admin:{encoded_password}"
+    f"@onee-sql-server-aya.database.windows.net/ONEE-SuiviDeplacements"
+    f"?driver=ODBC+Driver+17+for+SQL+Server&Encrypt=yes&TrustServerCertificate=no"
+)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -20,16 +24,8 @@ Base = declarative_base()
 
 # Dependency to get DB session
 def get_db():
-    """
-    Dependency function to provide a database session.
-    Ensures the session is closed after the request is processed.
-    """
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-
-# The 'func' object is needed in models for default timestamps,
-# so we'll export it from here or ensure models import it directly from sqlalchemy.
-# For simplicity, models will import func directly from sqlalchemy.
