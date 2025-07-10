@@ -72,11 +72,12 @@ class MissionBase(BaseModel):
     dateFin: datetime
     moyenTransport: Optional[str] = None
     vehicule_id: Optional[int] = None
-    directeur_id: int
+    directeur_id: Optional[int] = None
     statut: Optional[str] = "CREEE"  # Default value
     
     class Config:
         from_attributes = True
+
 
 # --- MissionCreate and MissionUpdate (for incoming requests) ---
 class MissionCreate(MissionBase):

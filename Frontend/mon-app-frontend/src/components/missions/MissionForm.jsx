@@ -1,15 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Row, Col, Spinner } from 'react-bootstrap';
 import { MissionStatus } from '../../constants'; // Ensure path is correct
+import ApiService from '../../api/apiService';
 
 // --- IMPORTANT: Define your backend API base URL here ---
-const API_BASE_URL = "http://localhost:8000";
+//const API_BASE_URL = "http://localhost:8000";
 
 const GEOCODING_API_BASE_URL = "https://atlas.microsoft.com";
 const AZURE_MAPS_API_KEY = "2awYgCjtEMly2f94tKyNqLZdu8WLgYnZmrgJdfK64uqwLdYQO1pxJQQJ99BFACYeBjFbQNAvAAAgAZMP35dr";
 
-const MissionForm = ({ mission, onSubmit, onCancel }) => {
+// --- NOUVEAU: Hook de remplacement pour obtenir le rôle de l'utilisateur ---
+// EN PRODUCTION, VOUS DEVEZ REMPLACER CELA PAR VOTRE PROPRE LOGIQUE
+// (par exemple, un contexte d'authentification qui stocke le rôle de l'utilisateur).
+const useUserRole = () => {
+    // Ceci est un exemple. En réalité, vous obtiendriez le rôle depuis votre état global d'authentification.
+    // Par exemple, depuis un contexte React (AuthContext) ou Redux/Zustand.
+    // Pour les tests, vous pouvez le changer manuellement: "directeur" ou "administrateur"
+    const [role, setRole] = useState(null); // 'directeur' | 'administrateur' | null
 
+    useEffect(() => {
+        // Simule un appel API ou une récupération depuis le stockage local/contexte
+        const fetchUserRole = async () => {
+            // Exemple: Récupérer le rôle depuis localStorage ou une API
+            const storedUser = localStorage.getItem('currentUser'); // Supposons que vous stockiez l'utilisateur ici
+            if (storedUser) {
+                const user = JSON.parse(storedUser);
+                setRole(user.role); // Assurez-vous que l'objet utilisateur a une propriété 'role'
+            } else {
+                // Pour le développement/test, définissez un rôle par défaut si aucun utilisateur n'est trouvé
+                // Ou laissez-le null si l'utilisateur doit se connecter d'abord
+                setRole('directeur'); // Exemple par défaut pour le développement
+            }
+        };
+        fetchUserRole();
+    }, []);
+
+    return role;
+};
+// --- FIN NOUVEAU HOOK ---
+
+
+const MissionForm = ({ mission, onSubmit, onCancel }) => {
+    const userRole = useUserRole(); // Récupérer le rôle de l'utilisateur
+    
     const parseTrajetPoints = (trajetJsonStr) => {
         try {
             if (trajetJsonStr && typeof trajetJsonStr === 'string') {
@@ -31,12 +64,16 @@ const MissionForm = ({ mission, onSubmit, onCancel }) => {
 
     const [formData, setFormData] = useState({
         objet: mission?.objet || '',
-        dateDebut: mission?.dateDebut ? new Date(mission.dateDebut).toISOString().split('T')[0] : '',
-        dateFin: mission?.dateFin ? new Date(mission.dateFin).toISOString().split('T')[0] : '',
+        dateDebut: mission?.dateDebut ? new Date(mission.dateDebut.replace('T00:00:00.000Z', '')).toLocaleDateString('en-CA') : '',
+        dateFin: mission?.dateFin ? new Date(mission.dateFin.replace('T00:00:00.000Z', '')).toLocaleDateString('en-CA') : '',
         moyenTransport: mission?.moyenTransport || '',
         statut: mission?.statut || MissionStatus.CREEE,
         vehicule_id: mission?.vehicule_id || '',
-        directeur_id: mission?.directeur_id || '',
+        // --- MODIFICATION ICI: directeur_id géré différemment ---
+        // directeur_id sera inclus seulement si l'utilisateur est administrateur et si une valeur est fournie
+        // Lors de la modification, si la mission a un directeur_id, on l'initialise.
+        directeur_id: mission?.directeur_id || '', 
+        // --- FIN MODIFICATION ---
         trajet_predefini: parseTrajetPoints(mission?.trajet_predefini).length > 0
             ? parseTrajetPoints(mission?.trajet_predefini)
             : [{ cityName: '', latitude: null, longitude: null }]
@@ -45,24 +82,18 @@ const MissionForm = ({ mission, onSubmit, onCancel }) => {
     const [validated, setValidated] = useState(false);
     const [loadingGeocode, setLoadingGeocode] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [availableVehicles, setAvailableVehicles] = useState([]); // State to store fetched vehicles
-    const [dateError, setDateError] = useState(''); // State pour gérer les erreurs de date
+    const [availableVehicles, setAvailableVehicles] = useState([]); 
+    const [dateError, setDateError] = useState(''); 
 
     // Fetch vehicles on component mount
     useEffect(() => {
         const fetchVehicles = async () => {
-            try {
-                // MODIFIED: Corrected endpoint path to include "/missions" prefix
-                const response = await fetch(`${API_BASE_URL}/missions/vehicules`); 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                setAvailableVehicles(data);
-            } catch (error) {
-                console.error("Error fetching vehicles:", error);
-                // Optionally show an alert to the user
-            }
+           try {
+             const data = await ApiService.request('/missions/vehicules');
+             setAvailableVehicles(data);
+           } catch (error) {
+              console.error("Error fetching vehicles:", error);
+           }
         };
         fetchVehicles();
     }, []);
@@ -71,12 +102,14 @@ const MissionForm = ({ mission, onSubmit, onCancel }) => {
     useEffect(() => {
         setFormData({
             objet: mission?.objet || '',
-            dateDebut: mission?.dateDebut ? new Date(mission.dateDebut).toISOString().split('T')[0] : '',
-            dateFin: mission?.dateFin ? new Date(mission.dateFin).toISOString().split('T')[0] : '',
+            dateDebut: mission?.dateDebut ? new Date(mission.dateDebut.replace('T00:00:00.000Z', '')).toLocaleDateString('en-CA') : '',
+            dateFin: mission?.dateFin ? new Date(mission.dateFin.replace('T00:00:00.000Z', '')).toLocaleDateString('en-CA') : '',
             moyenTransport: mission?.moyenTransport || '',
             statut: mission?.statut || MissionStatus.CREEE,
             vehicule_id: mission?.vehicule_id || '',
-            directeur_id: mission?.directeur_id || '',
+            // --- MODIFICATION ICI (bis) pour le reset du formulaire ---
+            directeur_id: mission?.directeur_id || '', 
+            // --- FIN MODIFICATION ---
             trajet_predefini: parseTrajetPoints(mission?.trajet_predefini).length > 0
                 ? parseTrajetPoints(mission?.trajet_predefini)
                 : [{ cityName: '', latitude: null, longitude: null }]
@@ -84,11 +117,11 @@ const MissionForm = ({ mission, onSubmit, onCancel }) => {
         setValidated(false);
         setLoadingGeocode({});
         setIsSubmitting(false);
-        setDateError(''); // Reset date error
+        setDateError(''); 
     }, [mission]);
 
-    // Fonction pour valider les dates
-    const validateDates = (dateDebut, dateFin) => {
+    // Fonction pour valider les dates - MODIFIÉE pour distinguer création/modification
+    const validateDates = (dateDebut, dateFin, isEditing = false) => {
         if (!dateDebut || !dateFin) {
             return '';
         }
@@ -96,14 +129,12 @@ const MissionForm = ({ mission, onSubmit, onCancel }) => {
         const debut = new Date(dateDebut);
         const fin = new Date(dateFin);
         const aujourd = new Date();
-        aujourd.setHours(0, 0, 0, 0); // Reset time to start of day
+        aujourd.setHours(0, 0, 0, 0); 
         
-        // Vérifier si la date de début est antérieure à aujourd'hui
-        if (debut < aujourd) {
+        if (!isEditing && debut < aujourd) {
             return 'La date de début ne peut pas être antérieure à aujourd\'hui.';
         }
         
-        // Vérifier si la date de fin est antérieure à la date de début
         if (fin < debut) {
             return 'La date de fin ne peut pas être antérieure à la date de début.';
         }
@@ -116,11 +147,11 @@ const MissionForm = ({ mission, onSubmit, onCancel }) => {
         setFormData(prev => {
             const newData = { ...prev, [name]: value };
             
-            // Valider les dates quand l'une d'elles change
             if (name === 'dateDebut' || name === 'dateFin') {
                 const error = validateDates(
                     name === 'dateDebut' ? value : newData.dateDebut,
-                    name === 'dateFin' ? value : newData.dateFin
+                    name === 'dateFin' ? value : newData.dateFin,
+                    !!mission?.id 
                 );
                 setDateError(error);
             }
@@ -149,8 +180,6 @@ const MissionForm = ({ mission, onSubmit, onCancel }) => {
 
     const geocodeAddress = async (index, address) => {
         if (!address || address.trim() === '') {
-            // Using a custom alert/modal is preferred over native alert()
-            // For now, keeping alert() as per original code, but note for future improvements
             alert("Veuillez entrer un nom de ville ou une adresse.");
             return;
         }
@@ -204,8 +233,11 @@ const MissionForm = ({ mission, onSubmit, onCancel }) => {
         e.preventDefault();
         const form = e.currentTarget;
 
-        // Vérifier d'abord les erreurs de date
-        const currentDateError = validateDates(formData.dateDebut, formData.dateFin);
+        const currentDateError = validateDates(
+            formData.dateDebut, 
+            formData.dateFin, 
+            !!mission?.id 
+        );
         if (currentDateError) {
             setDateError(currentDateError);
             setValidated(true);
@@ -250,54 +282,52 @@ const MissionForm = ({ mission, onSubmit, onCancel }) => {
                     longitude: point.longitude,
                 }));
 
-            let responseData = null;
-
-            const baseMissionData = {
+            // --- MODIFICATION: Préparer les données à envoyer en fonction du rôle ---
+            let missionDataToSend = {
                 objet: formData.objet,
                 dateDebut: new Date(formData.dateDebut).toISOString(),
                 dateFin: new Date(formData.dateFin).toISOString(),
                 moyenTransport: formData.moyenTransport || null,
                 statut: formData.statut,
-                directeur_id: parseInt(formData.directeur_id, 10),
-                // Ensure vehicule_id is null if empty string, or parsed int
                 vehicule_id: formData.vehicule_id ? parseInt(formData.vehicule_id, 10) : null,
                 trajet_predefini: pointsToSend.length > 0 ? pointsToSend : null,
             };
 
+            // Ajouter directeur_id seulement si l'utilisateur est administrateur
+            if (userRole === "administrateur") {
+                if (formData.directeur_id) { // S'assurer qu'un ID est effectivement fourni
+                    missionDataToSend.directeur_id = parseInt(formData.directeur_id, 10);
+                } else {
+                    // Pour un admin, si c'est une création et qu'aucun directeur_id n'est fourni, c'est une erreur.
+                    // Pour une mise à jour, si c'est vide, cela pourrait signifier 'retirer le directeur' si votre backend le supporte.
+                    // Ici, je suppose qu'un admin doit toujours en fournir un pour la création.
+                    if (!mission?.id) { // Si c'est une création
+                        throw new Error("L'ID du directeur est requis pour les administrateurs lors de la création.");
+                    }
+                     // Pour la mise à jour, si l'admin vide le champ, on envoie null ou l'ID actuel.
+                     // On enverra null si le champ est vide et n'est pas requis par la backend
+                     // Sinon, il ne faut pas l'inclure dans le payload pour ne pas le modifier implicitement
+                }
+            } else if (userRole === "directeur") {
+                // Pour un directeur, le backend récupère l'ID du directeur connecté.
+                // Donc, on ne l'inclut PAS dans le payload.
+                // Si `formData.directeur_id` était initialisé pour l'affichage, il ne faut pas l'envoyer.
+                // (Pas besoin de `delete missionDataToSend.directeur_id` car on construit le payload explicitement.)
+            }
+            // --- FIN MODIFICATION ---
+
+
+            let responseData = null;
+
             if (mission?.id) {
                 // MODIFICATION
-                console.log("Données de mission à mettre à jour:", baseMissionData);
-
-                const updateResponse = await fetch(`${API_BASE_URL}/missions/${mission.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(baseMissionData),
-                });
-
-                if (!updateResponse.ok) {
-                    const errorBody = await updateResponse.json();
-                    console.error("Erreur lors de la mise à jour de la mission (API Response):", errorBody);
-                    throw new Error(`Échec de la mise à jour de la mission: ${updateResponse.statusText || updateResponse.status}. Détails: ${JSON.stringify(errorBody)}`);
-                }
-                responseData = await updateResponse.json();
+                console.log("Données de mission à mettre à jour:", missionDataToSend);
+                responseData = await ApiService.updateMission(mission.id, missionDataToSend);
                 console.log("Mission mise à jour avec succès:", responseData);
-
             } else {
                 // CRÉATION
-                console.log("Données de mission à créer:", baseMissionData);
-
-                const createResponse = await fetch(`${API_BASE_URL}/missions`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(baseMissionData),
-                });
-
-                if (!createResponse.ok) {
-                    const errorBody = await createResponse.json();
-                    console.error("Erreur lors de la création de la mission (API Response):", errorBody);
-                    throw new Error(`Échec de la création de la mission: ${createResponse.statusText || createResponse.status}. Détails: ${JSON.stringify(errorBody)}`);
-                }
-                responseData = await createResponse.json();
+                console.log("Données de mission à créer:", missionDataToSend);
+                responseData = await ApiService.createMission(missionDataToSend);
                 console.log("Mission créée avec succès:", responseData);
             }
 
@@ -310,6 +340,7 @@ const MissionForm = ({ mission, onSubmit, onCancel }) => {
             setIsSubmitting(false);
         }
     };
+
 
     return (
         <Modal show={true} onHide={onCancel} centered size="lg">
@@ -441,20 +472,25 @@ const MissionForm = ({ mission, onSubmit, onCancel }) => {
 
                     {/* Director ID and Vehicle ID */}
                     <Row className="mb-3 g-3">
-                        <Form.Group as={Col} controlId="formDirecteurId">
-                            <Form.Label className="form-label text-dark">ID Directeur *</Form.Label>
-                            <Form.Control
-                                type="number"
-                                name="directeur_id"
-                                value={formData.directeur_id}
-                                onChange={handleChange}
-                                required
-                                placeholder="ID du directeur"
-                            />
-                            <Form.Control.Feedback type="invalid">
-                                Veuillez fournir l'ID du directeur.
-                            </Form.Control.Feedback>
-                        </Form.Group>
+                        {/* --- MODIFICATION: Affichage conditionnel du champ directeur_id --- */}
+                        {userRole === "administrateur" && (
+                            <Form.Group as={Col} controlId="formDirecteurId">
+                                <Form.Label className="form-label text-dark">ID Directeur *</Form.Label>
+                                <Form.Control
+                                    type="number"
+                                    name="directeur_id"
+                                    value={formData.directeur_id}
+                                    onChange={handleChange}
+                                    required={userRole === "administrateur" && !mission?.id} // Requis seulement pour les admins en création
+                                    placeholder="ID du directeur"
+                                />
+                                <Form.Control.Feedback type="invalid">
+                                    Veuillez fournir l'ID du directeur.
+                                </Form.Control.Feedback>
+                            </Form.Group>
+                        )}
+                        {/* --- FIN MODIFICATION --- */}
+
                         <Form.Group as={Col} controlId="formVehiculeId">
                             <Form.Label className="form-label text-dark">Véhicule</Form.Label>
                             <Form.Select
@@ -490,7 +526,7 @@ const MissionForm = ({ mission, onSubmit, onCancel }) => {
                             variant="primary" 
                             type="submit" 
                             className="flex-fill" 
-                            disabled={isSubmitting || dateError !== ''}
+                            disabled={isSubmitting || dateError !== '' || userRole === null}
                         >
                             {isSubmitting ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : (mission ? 'Modifier' : 'Créer')}
                         </Button>

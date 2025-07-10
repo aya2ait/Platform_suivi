@@ -5,35 +5,43 @@ import ApiService from '../../api/apiService';
 import MissionCard from './MissionCard';
 import MissionForm from './MissionForm';
 import MissionDetails from './MissionDetails';
-import MissionCollaboratorAssignment from './MissionCollaboratorAssignment'; // Cet import reste tel quel
-import CollaboratorManagement from './CollaboratorManagement'; // NOUVEL IMPORT DE VOTRE COMPOSANT
+import MissionCollaboratorAssignment from './MissionCollaboratorAssignment';
+import CollaboratorManagement from './CollaboratorManagement';
 import { MissionStatus } from '../../constants';
+import { useAuth } from '../../contexts/AuthContext';
 
 const MissionsList = () => {
+    const { user, hasPermission, axiosInstance, authReady, isAuthenticated } = useAuth(); // Add authReady
     const [missions, setMissions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     // États pour MissionForm (création/édition de mission)
     const [showMissionForm, setShowMissionForm] = useState(false);
-    const [editingMission, setEditingMission] = useState(null); // L'objet mission en cours d'édition
+    const [editingMission, setEditingMission] = useState(null);
 
     // États pour MissionDetails (affichage des détails de mission)
-    const [selectedMission, setSelectedMission] = useState(null); // L'objet mission pour la vue détaillée
+    const [selectedMission, setSelectedMission] = useState(null);
 
-    // États pour MissionCollaboratorAssignment (assignation initiale de collaborateurs, si c'est une modale différente)
+    // États pour MissionCollaboratorAssignment
     const [showAssignmentForm, setShowAssignmentForm] = useState(false);
-    const [missionIdToAssign, setMissionIdToAssign] = useState(null); // ID de la mission pour l'assignation initiale
-    const [collaboratorsForAssignment, setCollaboratorsForAssignment] = useState([]); // Collaborateurs pour l'assignation initiale
+    const [missionIdToAssign, setMissionIdToAssign] = useState(null);
+    const [collaboratorsForAssignment, setCollaboratorsForAssignment] = useState([]);
 
-    // NOUVEAUX ÉTATS POUR CollaboratorManagement
+    // États pour CollaboratorManagement
     const [showCollaboratorManagementModal, setShowCollaboratorManagementModal] = useState(false);
-    const [missionIdForManagement, setMissionIdForManagement] = useState(null); // L'ID de la mission dont on gère les collaborateurs
+    const [missionIdForManagement, setMissionIdForManagement] = useState(null);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
     const fetchMissions = async () => {
+        // Don't make API calls if auth is not ready or user is not authenticated
+        if (!authReady || !isAuthenticated) {
+            console.log('Skipping API call - auth not ready or not authenticated');
+            return;
+        }
+
         try {
             setLoading(true);
             const params = {};
@@ -51,7 +59,20 @@ const MissionsList = () => {
         }
     };
 
+    // Updated useEffect to depend on authReady and isAuthenticated
     useEffect(() => {
+        // Only proceed if auth is ready and user is authenticated
+        if (!authReady) {
+            console.log('Auth not ready yet, waiting...');
+            return;
+        }
+
+        if (!isAuthenticated) {
+            console.log('User not authenticated');
+            setLoading(false);
+            return;
+        }
+
         const handler = setTimeout(() => {
             fetchMissions();
         }, 300);
@@ -59,31 +80,44 @@ const MissionsList = () => {
         return () => {
             clearTimeout(handler);
         };
-    }, [statusFilter, searchTerm]);
+    }, [statusFilter, searchTerm, authReady, isAuthenticated]); // Add authReady and isAuthenticated as dependencies
 
-    // Gère la soumission du MissionForm lors de la création d'une NOUVELLE mission
+    // Show loading while auth is not ready
+    if (!authReady) {
+        return (
+            <div className="d-flex justify-content-center align-items-center h-64">
+                <Spinner animation="border" role="status" variant="primary">
+                    <span className="visually-hidden">Initialisation...</span>
+                </Spinner>
+            </div>
+        );
+    }
+
+    // If auth is ready but user is not authenticated, show appropriate message
+    if (!isAuthenticated) {
+        return (
+            <Alert variant="warning" className="text-center py-4">
+                Vous devez être connecté pour accéder aux missions.
+            </Alert>
+        );
+    }
+
     const handleCreateMission = async (responseData) => {
         try {
             setShowMissionForm(false);
-            
-            // Si vous voulez ouvrir CollaboratorManagement après la création, décommentez ceci:
-            // setMissionIdForManagement(responseData.id);
-            // setShowCollaboratorManagementModal(true);
-            
-            fetchMissions(); // Rafraîchit la liste
+            fetchMissions();
         } catch (err) {
             console.error('Erreur:', err);
             alert(`Erreur: ${err.message}`);
         }
     };
 
-    // Gère la soumission du MissionForm lors de la mise à jour d'une mission EXISTANTE
     const handleUpdateMission = async (missionData) => {
         try {
             await ApiService.updateMission(editingMission.id, missionData);
             setEditingMission(null);
             setShowMissionForm(false);
-            fetchMissions(); // Rafraîchit la liste après la mise à jour
+            fetchMissions();
         } catch (err) {
             console.error('Erreur lors de la modification:', err);
             alert(`Erreur lors de la modification de la mission: ${err.message || 'Veuillez vérifier les données.'}`);
@@ -102,7 +136,6 @@ const MissionsList = () => {
         }
     };
 
-    // Handler existant pour l'assignation initiale (si MissionCollaboratorAssignment est toujours utilisé)
     const handleAssignCollaboratorsClick = (mission) => {
         setMissionIdToAssign(mission.id);
         if (mission.affectations && Array.isArray(mission.affectations)) {
@@ -118,25 +151,22 @@ const MissionsList = () => {
         setShowAssignmentForm(true);
     };
 
-    // Callback lorsque les collaborateurs sont enregistrés dans MissionCollaboratorAssignment
     const handleCollaboratorAssignmentSaved = () => {
         setShowAssignmentForm(false);
         setMissionIdToAssign(null);
         setCollaboratorsForAssignment([]);
-        fetchMissions(); // Rafraîchit la liste principale des missions
+        fetchMissions();
     };
 
-    // NOUVEAU HANDLER POUR OUVRIR CollaboratorManagement
     const openCollaboratorManagement = (missionId) => {
         setMissionIdForManagement(missionId);
         setShowCollaboratorManagementModal(true);
     };
 
-    // NOUVEAU HANDLER POUR FERMER CollaboratorManagement
     const closeCollaboratorManagement = () => {
         setShowCollaboratorManagementModal(false);
-        setMissionIdForManagement(null); // Réinitialise l'ID de la mission
-        fetchMissions(); // Rafraîchit la liste des missions après une modification
+        setMissionIdForManagement(null);
+        fetchMissions();
     };
 
     if (loading) {
@@ -220,7 +250,6 @@ const MissionsList = () => {
                                 onDelete={handleDeleteMission}
                                 onViewDetails={setSelectedMission}
                                 onAssignCollaborators={handleAssignCollaboratorsClick} 
-                                // NOUVELLE PROP POUR GÉRER LES COLLABORATEURS AVEC VOTRE NOUVEAU COMPOSANT
                                 onManageCollaborators={() => openCollaboratorManagement(mission.id)} 
                             />
                         </Col>
@@ -232,7 +261,7 @@ const MissionsList = () => {
                 )}
             </Row>
 
-            {/* Modals existantes */}
+            {/* Modals */}
             {showMissionForm && (
                 <MissionForm
                     mission={editingMission}
@@ -251,7 +280,6 @@ const MissionsList = () => {
                 />
             )}
 
-            {/* Votre modale MissionCollaboratorAssignment existante */}
             {showAssignmentForm && missionIdToAssign && (
                 <MissionCollaboratorAssignment
                     missionId={missionIdToAssign}
@@ -265,13 +293,12 @@ const MissionsList = () => {
                 />
             )}
 
-            {/* VOTRE NOUVELLE MODALE CollaboratorManagement EST ICI */}
             {showCollaboratorManagementModal && missionIdForManagement && (
                 <CollaboratorManagement
                     missionId={missionIdForManagement}
                     show={showCollaboratorManagementModal}
-                    onHide={closeCollaboratorManagement} // Appelle notre handler pour fermer et rafraîchir
-                    onUpdate={fetchMissions} // Le composant interne rafraîchit déjà sa liste, mais on peut aussi rafraîchir la liste parente
+                    onHide={closeCollaboratorManagement}
+                    onUpdate={fetchMissions}
                 />
             )}
         </Container>

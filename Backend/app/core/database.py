@@ -12,11 +12,15 @@ from sqlalchemy.sql import func  # For default timestamps
 encoded_password = urllib.parse.quote_plus("OneeSQL2025!")
 
 # Connexion à Azure SQL
-DATABASE_URL = (
-    f"mssql+pyodbc://onesql_admin:{encoded_password}"
-    f"@onee-sql-server-aya.database.windows.net/ONEE-SuiviDeplacements"
-    f"?driver=ODBC+Driver+17+for+SQL+Server&Encrypt=yes&TrustServerCertificate=no"
-)
+#DATABASE_URL = (
+#    f"mssql+pyodbc://onesql_admin:{encoded_password}"
+#    f"@onee-sql-server-aya.database.windows.net/ONEE-SuiviDeplacements"
+#    f"?driver=ODBC+Driver+17+for+SQL+Server&Encrypt=yes&TrustServerCertificate=no"
+#)
+DATABASE_URL = "mysql+pymysql://root:@localhost/ONEE_SuiviDeplacements"
+
+
+
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -29,3 +33,5 @@ def get_db():
         yield db
     finally:
         db.close()
+
+

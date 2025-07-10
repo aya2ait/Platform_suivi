@@ -1,0 +1,172 @@
+/* src/styles/professionalStyles.css */
+
+/* Variables de Couleurs */
+:root {
+    --color-primary: #0056b3; /* Bleu plus profond */
+    --color-secondary: #007bff; /* Bleu standard */
+    --color-accent: #e9ecef; /* Gris clair pour l'accentuation subtile */
+    --color-background: #f8f9fa; /* Blanc cassé / Gris très clair */
+    --color-surface: #ffffff; /* Blanc pur pour les cartes */
+    --color-text: #343a40; /* Gris foncé pour le texte principal */
+    --color-muted: #adb5bd; /* Gris moyen pour les éléments secondaires */
+    --color-success: #28a745; /* Vert standard */
+    --color-warning: #ffc107; /* Jaune standard */
+    --color-danger: #dc3545; /* Rouge standard */
+    --color-danger-rgb: 220, 53, 69;
+}
+
+/* Styles pour les champs de saisie */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"] {
+    border: 1px solid var(--color-muted);
+    color: var(--color-text);
+    background-color: var(--color-surface);
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    padding: 0.75rem 1rem;
+    border-radius: 0.375rem; /* rounded-md */
+    width: 100%; /* S'assure que les inputs prennent toute la largeur disponible */
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 86, 179, 0.25);
+    outline: none;
+}
+
+/* Styles de bouton réutilisables */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.375rem; /* rounded-md */
+    font-weight: 600; /* semi-bold */
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease-out, box-shadow 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none; /* Supprime la bordure par défaut des boutons */
+    cursor: pointer;
+}
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-primary {
+    background-color: var(--color-primary);
+    color: var(--color-surface);
+}
+.btn-primary:hover {
+    background-color: #004085; /* Darker primary on hover */
+}
+
+.btn-secondary {
+    background-color: var(--color-muted);
+    color: var(--color-text);
+}
+.btn-secondary:hover {
+    background-color: #909ea9; /* Darker muted on hover */
+}
+
+.btn-success {
+    background-color: var(--color-success);
+    color: var(--color-surface);
+}
+.btn-success:hover {
+    background-color: #218838; /* Darker success on hover */
+}
+
+.btn-danger {
+    background-color: var(--color-danger);
+    color: var(--color-surface);
+}
+.btn-danger:hover {
+    background-color: #c82333; /* Darker danger on hover */
+}
+
+/* Styles des cartes/sections */
+.card-panel {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-accent); /* Bordure subtile */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Ombre plus douce */
+    border-radius: 0.75rem; /* rounded-lg */
+    padding: 2.5rem; /* Plus d'espace interne */
+}
+
+/* Styles de tableau */
+.table-header {
+    background-color: var(--color-primary);
+    color: white;
+}
+.table-row-even {
+    background-color: var(--color-surface);
+}
+.table-row-odd {
+    background-color: var(--color-accent); /* Utilise la couleur accent pour l'alternance */
+}
+.table-row:hover {
+    background-color: rgba(0, 123, 255, 0.05); /* Léger survol bleu */
+}
+
+/* Checkbox style */
+.form-checkbox {
+    accent-color: var(--color-primary); /* Change la couleur de la coche */
+}
+
+/* Styles pour le texte */
+.text-primary {
+    color: var(--color-primary);
+}
+.text-secondary {
+    color: var(--color-secondary);
+}
+.text-text {
+    color: var(--color-text);
+}
+.text-muted {
+    color: var(--color-muted);
+}
+.text-success {
+    color: var(--color-success);
+}
+.text-danger {
+    color: var(--color-danger);
+}
+
+/* Utilitaires de mise en page, si nécessaire pour la réutilisation */
+.container-max-w-7xl {
+    max-width: 80rem; /* Equivalent à max-w-7xl de Tailwind */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.min-h-screen-bg {
+    min-height: 100vh;
+    background-color: var(--color-background);
+}
+
+/* Styles pour les titres */
+.title-main {
+    font-size: 3rem; /* text-5xl */
+    font-weight: 800; /* font-extrabold */
+    text-align: center;
+    margin-bottom: 3rem; /* mb-12 */
+    color: var(--color-primary);
+}
+
+.title-section {
+    font-size: 1.875rem; /* text-3xl */
+    font-weight: 700; /* font-bold */
+    margin-bottom: 1.5rem; /* mb-6 */
+    color: var(--color-text);
+}

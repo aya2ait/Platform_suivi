@@ -1,11 +1,10 @@
-// MissionCollaboratorAssignment.jsx
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Row, Col, Spinner, Badge } from 'react-bootstrap';
-
-// --- IMPORTANT: Define your backend API base URL here ---
-const API_BASE_URL = "http://localhost:8000";
+import { useAuth } from '../../contexts/AuthContext'; // Ajout de l'import
+import ApiService from '../../api/apiService';
 
 const MissionCollaboratorAssignment = ({ missionId, currentCollaborators = [], onSave, onCancel }) => {
+    const { authReady } = useAuth(); // Utilisation du contexte d'authentification
     const [collaborateurs, setCollaborateurs] = useState(currentCollaborators);
     const [newCollaborateurMatricule, setNewCollaborateurMatricule] = useState('');
     const [loadingCollaborateur, setLoadingCollaborateur] = useState(false);
@@ -29,15 +28,36 @@ const MissionCollaboratorAssignment = ({ missionId, currentCollaborators = [], o
 
         setLoadingCollaborateur(true);
         try {
-            //Dans un cas réel, vous feriez une requête API pour valider le matricule
-            // For now, we simulate success 
-            const nouveauCollaborateur = {
-                matricule: matricule,
-                nom: `Collaborateur ${matricule}`, // Placeholder name
-            };
+            // Option 1: Valider le matricule via l'API (recommandé)
+            try {
+                const allCollaborators = await ApiService.getAllCollaborators();
+                const foundCollaborator = allCollaborators.find(c => c.matricule === matricule);
+                
+                if (!foundCollaborator) {
+                    alert("Matricule non trouvé dans la base de données.");
+                    setLoadingCollaborateur(false);
+                    return;
+                }
 
-            setCollaborateurs(prev => [...prev, nouveauCollaborateur]);
-            setNewCollaborateurMatricule('');
+                const nouveauCollaborateur = {
+                    matricule: matricule,
+                    nom: foundCollaborator.nom || `Collaborateur ${matricule}`,
+                };
+
+                setCollaborateurs(prev => [...prev, nouveauCollaborateur]);
+                setNewCollaborateurMatricule('');
+            } catch (validationError) {
+                console.error("Erreur lors de la validation du matricule:", validationError);
+                // Fallback: ajouter sans validation si l'API n'est pas disponible
+                const nouveauCollaborateur = {
+                    matricule: matricule,
+                    nom: `Collaborateur ${matricule}`, // Placeholder name
+                };
+
+                setCollaborateurs(prev => [...prev, nouveauCollaborateur]);
+                setNewCollaborateurMatricule('');
+            }
+
         } catch (error) {
             console.error("Erreur lors de l'ajout du collaborateur:", error);
             alert("Erreur lors de l'ajout du collaborateur. Vérifiez le matricule et la connexion.");
@@ -56,27 +76,19 @@ const MissionCollaboratorAssignment = ({ missionId, currentCollaborators = [], o
             return;
         }
 
+        if (!authReady) {
+            alert("Authentification en cours, veuillez patienter.");
+            return;
+        }
+
         setIsSaving(true);
         try {
-            const assignmentData = {
-                collaborateurs: collaborateurs.map(c => ({ matricule: c.matricule }))
-            };
+            const assignmentData = collaborateurs.map(c => ({ matricule: c.matricule }));
 
             console.log("Affectation des collaborateurs à la mission:", missionId, assignmentData);
 
-            const response = await fetch(`${API_BASE_URL}/missions/${missionId}/assign_collaborators/`, {
-                method: 'POST', // ou PUT si votre backend gère l'upsert via PUT
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(assignmentData),
-            });
+            const affectationResult = await ApiService.assignCollaborators(missionId, assignmentData);
 
-            if (!response.ok) {
-                const errorBody = await response.json();
-                console.error("Erreur lors de l'affectation des collaborateurs:", errorBody);
-                throw new Error(`Échec de l'affectation des collaborateurs: ${response.statusText || response.status}. Détails: ${JSON.stringify(errorBody)}`);
-            }
-
-            const affectationResult = await response.json();
             console.log("Collaborateurs affectés avec succès:", affectationResult);
             onSave(affectationResult); // Passer le résultat au composant parent
         } catch (error) {
@@ -116,7 +128,7 @@ const MissionCollaboratorAssignment = ({ missionId, currentCollaborators = [], o
                             <Button
                                 variant="success"
                                 onClick={addCollaborateur}
-                                disabled={loadingCollaborateur || !newCollaborateurMatricule.trim()}
+                                disabled={loadingCollaborateur || !newCollaborateurMatricule.trim() || !authReady}
                             >
                                 {loadingCollaborateur ?
                                     <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> :
@@ -154,8 +166,15 @@ const MissionCollaboratorAssignment = ({ missionId, currentCollaborators = [], o
                 )}
             </Modal.Body>
             <Modal.Footer>
-                <Button variant="primary" onClick={handleSaveAssignments} disabled={isSaving}>
-                    {isSaving ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : 'Enregistrer les affectations'}
+                <Button 
+                    variant="primary" 
+                    onClick={handleSaveAssignments} 
+                    disabled={isSaving || !authReady}
+                >
+                    {isSaving ? 
+                        <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : 
+                        'Enregistrer les affectations'
+                    }
                 </Button>
                 <Button variant="secondary" onClick={onCancel} disabled={isSaving}>
                     Annuler

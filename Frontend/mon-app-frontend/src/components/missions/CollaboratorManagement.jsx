@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Row, Col, Table, Alert, Spinner, Badge } from 'react-bootstrap';
-
-const API_BASE_URL = "http://localhost:8000"; // Make sure this matches your backend URL
+import { useAuth } from '../../contexts/AuthContext';
+import ApiService from '../../api/apiService';
 
 const CollaboratorManagement = ({ missionId, show, onHide, onUpdate }) => {
+    const { authReady } = useAuth(); // Utilisation du contexte d'authentification
     const [collaborators, setCollaborators] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -21,21 +22,13 @@ const CollaboratorManagement = ({ missionId, show, onHide, onUpdate }) => {
 
     // Charger les collaborateurs de la mission
     const loadCollaborators = async () => {
-        if (!missionId) return;
+        if (!missionId || !authReady) return; // Attendre que l'auth soit prête
         
         setLoading(true);
         setError('');
         
         try {
-            const response = await fetch(`${API_BASE_URL}/missions/${missionId}/collaborators`);
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                const errorMessage = errorData.detail 
-                                     ? errorData.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join(', ')
-                                     : `Erreur HTTP: ${response.status}`;
-                throw new Error(errorMessage);
-            }
-            const data = await response.json();
+            const data = await ApiService.getMissionCollaborators(missionId);
             console.log("Données des collaborateurs reçues:", data);
             
             // Mapper les données du backend vers le format attendu par le frontend
@@ -58,7 +51,7 @@ const CollaboratorManagement = ({ missionId, show, onHide, onUpdate }) => {
 
     // Charger les collaborateurs quand le composant se monte ou que missionId change
     useEffect(() => {
-        if (show && missionId) {
+        if (show && missionId && authReady) {
             loadCollaborators();
             // Reset form when modal opens or missionId changes
             setNewCollaborator({
@@ -69,7 +62,7 @@ const CollaboratorManagement = ({ missionId, show, onHide, onUpdate }) => {
                 accouchement: 0
             });
         }
-    }, [show, missionId]);
+    }, [show, missionId, authReady]); // Ajout de authReady dans les dépendances
 
     // Gérer les changements dans le formulaire
     const handleInputChange = (e) => {
@@ -116,21 +109,7 @@ const CollaboratorManagement = ({ missionId, show, onHide, onUpdate }) => {
 
             console.log('Payload envoyé:', JSON.stringify(payload, null, 2));
 
-            const response = await fetch(`${API_BASE_URL}/missions/${missionId}/manage-collaborators`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                const errorMessage = errorData.detail 
-                                     ? errorData.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join(', ')
-                                     : `Erreur HTTP: ${response.status}`;
-                throw new Error(errorMessage);
-            }
+            await ApiService.manageMissionCollaborators(missionId, payload);
             
             if (newCollaborator.action === 'add') {
                 setSuccess(`Collaborateur ${newCollaborator.matricule} ajouté avec succès.`);
@@ -183,21 +162,7 @@ const CollaboratorManagement = ({ missionId, show, onHide, onUpdate }) => {
 
             console.log('Payload de suppression:', JSON.stringify(payload, null, 2));
 
-            const response = await fetch(`${API_BASE_URL}/missions/${missionId}/manage-collaborators`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                const errorMessage = errorData.detail 
-                                     ? errorData.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join(', ')
-                                     : `Erreur HTTP: ${response.status}`;
-                throw new Error(errorMessage);
-            }
+            await ApiService.manageMissionCollaborators(missionId, payload);
 
             setSuccess(`Collaborateur ${matricule} retiré avec succès.`);
             

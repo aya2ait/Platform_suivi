@@ -41,6 +41,8 @@ class Utilisateur(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     directeur = relationship("Directeur", back_populates="utilisateur_rel", uselist=False)
+    collaborateur = relationship("Collaborateur", back_populates="utilisateur_rel", uselist=False)
+
 
 class Directeur(Base):
     __tablename__ = "Directeur"
@@ -72,6 +74,8 @@ class TauxIndemnite(Base):
 class Collaborateur(Base):
     __tablename__ = "Collaborateur"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    utilisateur_id = Column(Integer, ForeignKey("Utilisateur.id"), nullable=True)  # Nullable pour compatibilité
+
     nom = Column(String(100), nullable=False)
     matricule = Column(String(50), unique=True, nullable=False)
     type_collaborateur_id = Column(Integer, ForeignKey("TypeCollaborateur.id"), nullable=False)
@@ -81,6 +85,7 @@ class Collaborateur(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
+    utilisateur_rel = relationship("Utilisateur", back_populates="collaborateur")
     type_collaborateur_rel = relationship("TypeCollaborateur", back_populates="collaborateurs")
     direction_rel = relationship("Direction", back_populates="collaborateurs")
     taux_indemnite_rel = relationship("TauxIndemnite", back_populates="collaborateurs")
