@@ -405,7 +405,7 @@ const MoroccoInteractiveMap = () => {
                 icon: missionIcon
             }).addTo(leafletMapRef.current);
 
-            // Popup avec informations de la mission (inchangé)
+            // Popup avec informations de la mission (MODIFIÉ pour afficher les détails des anomalies)
             const popupContent = `
                 <div style="min-width: 200px; font-family: system-ui, sans-serif;">
                     <div style="border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 8px;">
@@ -479,10 +479,19 @@ const MoroccoInteractiveMap = () => {
                             border: 1px solid #fecaca;
                             border-radius: 4px;
                         ">
-                            <p style="margin: 0; font-size: 11px; color: #dc2626;">
-                                <strong>⚠️ Anomalies détectées:</strong><br>
-                                ${mission.anomalies.length} anomalie(s)
+                            <p style="margin: 0; font-size: 11px; color: #dc2626; font-weight: 600;">
+                                ⚠️ Anomalies détectées:
                             </p>
+                            <ul style="margin: 4px 0 0 10px; padding: 0; list-style-type: disc;">
+                                ${mission.anomalies.map(anomaly => `
+                                    <li style="font-size: 10px; color: #dc2626; margin-bottom: 2px;">
+                                        <strong>Type:</strong> ${anomaly.type || 'N/A'}<br/>
+                                        <strong>Description:</strong> ${anomaly.description || 'N/A'}<br/>
+                                        <strong>Date de détection:</strong> ${anomaly.dateDetection ? new Date(anomaly.dateDetection).toLocaleString('fr-FR') : 'N/A'}<br/>
+                                        <strong>Date de création:</strong> ${anomaly.created_at ? new Date(anomaly.created_at).toLocaleString('fr-FR') : 'N/A'}
+                                    </li>
+                                `).join('')}
+                            </ul>
                         </div>
                     ` : ''}
                 </div>
@@ -500,7 +509,7 @@ const MoroccoInteractiveMap = () => {
             markersRef.current[mission.id] = marker;
 
             // MODIFIÉ : Gestion des tracés selon le statut
-          
+            
             // MODIFIÉ : Désactiver le tracé pour les missions 'EN_COURS'
             // Les missions en cours n'affichent plus leur trajet parcouru
         });
@@ -673,58 +682,36 @@ const MoroccoInteractiveMap = () => {
                                     <p className="text-xs text-gray-600">
                                         Par {mission.directeur_prenom} {mission.directeur_nom}
                                     </p>
-                                    {mission.vehicule_immatriculation && (
-                                        <p className="text-xs text-gray-500 flex items-center mt-1">
-                                            <Car className="h-3 w-3 mr-1" />
-                                            {mission.vehicule_immatriculation}
-                                        </p>
-                                    )}
-                                    <div className="flex items-center justify-between mt-2">
+                                    <p className="text-xs text-gray-500 flex items-center mt-1">
+                                        <MapPin className="h-3 w-3 mr-1" />
+                                        {mission.destination}
+                                    </p>
+                                    <div className="mt-2 flex items-center justify-between">
                                         <span
-                                            style={{ backgroundColor: getStatusColor(mission.statut) }}
-                                            className="px-2 py-0.5 rounded-full text-white text-xs font-medium"
+                                            className="px-2 py-1 text-xs font-medium rounded-full"
+                                            style={{
+                                                backgroundColor: getStatusColor(mission.statut),
+                                                color: 'white',
+                                            }}
                                         >
                                             {getStatusText(mission.statut)}
                                         </span>
                                         {hasAnomalies(mission) && (
-                                            <span className="text-red-500 text-xs font-medium flex items-center">
+                                            <span className="text-red-600 text-xs font-semibold flex items-center">
                                                 <AlertTriangle className="h-3 w-3 mr-1" />
                                                 Anomalie(s)
                                             </span>
                                         )}
                                     </div>
-                                    <div className="flex items-center text-gray-500 text-xs mt-1">
-                                        <Calendar className="h-3 w-3 mr-1" />
-                                        <span>
-                                            {new Date(mission.dateDebut).toLocaleDateString('fr-FR')} -{' '}
-                                            {new Date(mission.dateFin).toLocaleDateString('fr-FR')}
-                                        </span>
-                                    </div>
                                 </div>
                             ))}
-                            {missions.length === 0 && !loading && !error && (
-                                <div className="p-4 text-center text-gray-500">
-                                    Aucune mission trouvée.
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>
 
-                {/* Main Content - Map */}
-                <div className="flex-1">
-                    <div
-                        id="mapid"
-                        ref={mapRef}
-                        className="w-full h-full"
-                        style={{ minHeight: '500px' }} // Ensure map has a minimum height
-                    >
-                        {!isMapLoaded && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-gray-200 bg-opacity-75 z-10">
-                                <p className="text-gray-700 text-lg">Chargement de la carte...</p>
-                            </div>
-                        )}
-                    </div>
+                {/* Map Container */}
+                <div className="flex-1 relative">
+                    <div ref={mapRef} className="h-full w-full rounded-lg shadow-inner"></div>
                 </div>
             </div>
         </div>

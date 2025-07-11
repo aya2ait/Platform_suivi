@@ -2,7 +2,7 @@ import os
 
 # Configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://root:@localhost/ONEE_SuiviDeplacements")
-IOT_HUB_CONNECTION_STRING = "HostName=monapp.azure-devices.net;DeviceId=mydvice;SharedAccessKey=Bw8eBX4YBydlJoCL84CFV76f0qu7QAVYSAar45vbXkw="
+IOT_HUB_CONNECTION_STRING = "HostName=myapp.azure-devices.net;DeviceId=mydvice;SharedAccessKey=cNgslTZVdJ4hdClC2FqSbWVJKCtgGSih6YryGG8tzR8="
 
 # Geographic bounds for Morocco
 MOROCCO_BOUNDS = {
